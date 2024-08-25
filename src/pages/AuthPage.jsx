@@ -1,16 +1,40 @@
 import { useState } from "react";
 import { AuthenticationForm } from "../components/AuthenticationForm";
+import { API_URL } from "../constants";
+import { httpRequest } from "../services/authServices";
+import { useNavigate } from "react-router-dom";
 
 export function AuthPage() {
   const [mode, setMode] = useState("login");
+  const navigate = useNavigate();
 
   const toggleMode = () => {
     setMode(mode === "login" ? "signup" : "login");
   };
 
-  function onSubmit(e) {
-    e.preventDefault();
-    console.log("Form submitted");
+  async function onSubmit(data) {
+    const url = mode === "login" ? API_URL.LOGIN_URL : API_URL.REGISTER_URL;
+    const phone = data.number;
+    const password = data.password;
+    const createpassword = data.createpassword;
+    try {
+      let response = "";
+      if (mode === "login") {
+        response = await httpRequest.post(url, { phone, password });
+        const accessToken = await response.data.access;
+        const refreshToken = await response.data.refresh;
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+        navigate("/home");
+      } else {
+        response = await httpRequest.post(url, {
+          phone,
+          password: createpassword,
+        });
+      }
+    } catch (e) {
+      console.log(e.message);
+    }
   }
 
   return (

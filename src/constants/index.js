@@ -1,4 +1,4 @@
-const BASE_URL = "https://mohammadrezagh80.pythonanywhere.com";
+const BASE_URL = "http://mohammadrezagh80.pythonanywhere.com";
 
 const REFRESH_TOKEN_URL = "/api/accounts/refresh/";
 

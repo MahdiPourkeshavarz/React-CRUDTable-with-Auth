@@ -7,13 +7,10 @@ export const httpRequest = axios.create({
 });
 
 httpRequest.interceptors.request.use((req) => {
-  if (req.url !== API_URL.REFRESH_TOKEN_URL) {
-    const token = localStorage.getItem("refreshToken");
-    req.headers.refreshToken = token;
-  } else if (req.url !== API_URL.LOGIN_URL) {
-    const token = localStorage.getItem("accessToken");
-    req.headers.accessToken = token;
-  }
+  // if (req.url !== API_URL.LOGIN_URL) {
+  //   const token = localStorage.getItem("accessToken");
+  //   req.headers.accessToken = `Bearer ${token}`;
+  // }
   return req;
 });
 

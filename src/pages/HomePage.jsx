@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { TableProvider } from "../components/CourseTable";
 import { toast, ToastContainer } from "react-toastify";
 import { useEffect } from "react";
+import { TableProvider } from "../context/TableProvider";
 
 export function HomePage() {
   useEffect(() => {

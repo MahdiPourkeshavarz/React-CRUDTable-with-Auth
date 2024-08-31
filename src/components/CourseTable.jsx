@@ -3,23 +3,50 @@
 import { useMemo, useState } from "react";
 import {
   MaterialReactTable,
-  // createRow,
   useMaterialReactTable,
 } from "material-react-table";
-import { Box, Button, IconButton, Tooltip, Typography } from "@mui/material";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { fakeData, categories } from "./fakeData/data";
+import { Box, Button, IconButton, Tooltip } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { useMutation } from "@tanstack/react-query";
+import { useGetCourses } from "../hooks/useGetCourses";
+import { COURSE_SERVICE } from "../services/courseServices";
+import { queryClient } from "../lib/reactQueryConfig";
 
 export function CourseTable() {
   const [validationErrors, setValidationErrors] = useState({});
+
+  const { data: fetchCourses, isLoading: isLoadingCourses } = useGetCourses();
+
+  const createCourseMutation = useMutation({
+    mutationFn: (course) => COURSE_SERVICE.createCourse(course),
+    onMutate: (newCourseInfo) => {
+      queryClient.setQueryData(["courses"], (prevCourses = []) => [
+        ...prevCourses,
+        { ...newCourseInfo, id: crypto.randomUUID() },
+      ]);
+    },
+  });
+
+  const deleteCourseMutation = useMutation({
+    mutationFn: (courseId) => COURSE_SERVICE.deleteCourse(courseId),
+    onMutate: (courseId) => {
+      queryClient.setQueryData(["courses"], (prevCourses = []) =>
+        prevCourses.filter((course) => course.id !== courseId)
+      );
+    },
+  });
+
+  const updateCourseMutation = useMutation({
+    mutationFn: (course) => COURSE_SERVICE.updateCourse(course),
+    onMutate: (newCourseInfo) => {
+      queryClient.setQueryData(["courses"], (prevCourses = []) =>
+        prevCourses.map((course) =>
+          course.id === newCourseInfo.id ? newCourseInfo : course
+        )
+      );
+    },
+  });
 
   const columns = useMemo(
     () => [
@@ -27,102 +54,100 @@ export function CourseTable() {
         accessorKey: "title",
         header: "Course Title",
         muiEditTextFieldProps: {
+          type: "string",
           required: true,
-          error: !!validationErrors?.firstName,
-          helperText: validationErrors?.firstName,
+          error: !!validationErrors?.title,
+          helperText: validationErrors?.title,
           onFocus: () =>
             setValidationErrors({
               ...validationErrors,
-              firstName: undefined,
+              title: undefined,
             }),
         },
       },
       {
-        accessorKey: "price",
-        header: "Course Price",
+        accessorKey: "teacher",
+        header: "Course Teacher",
         muiEditTextFieldProps: {
+          type: "string",
           required: true,
-          error: !!validationErrors?.lastName,
-          helperText: validationErrors?.lastName,
+          error: !!validationErrors?.teacher,
+          helperText: validationErrors?.teacher,
           onFocus: () =>
             setValidationErrors({
               ...validationErrors,
-              lastName: undefined,
+              teacher: undefined,
             }),
         },
       },
       {
         accessorKey: "duration",
-        header: "Course Duration",
+        header: "Course Duration (Hrs)",
         muiEditTextFieldProps: {
           type: "number",
           required: true,
-          error: !!validationErrors?.email,
-          helperText: validationErrors?.email,
+          error: !!validationErrors?.duration,
+          helperText: validationErrors?.duration,
           onFocus: () =>
             setValidationErrors({
               ...validationErrors,
-              email: undefined,
+              duration: undefined,
             }),
         },
       },
       {
-        accessorKey: "category",
-        header: "Category",
-        editVariant: "select",
-        editSelectOptions: categories,
+        accessorKey: "price",
+        header: "price ($)",
         muiEditTextFieldProps: {
-          select: true,
-          error: !!validationErrors?.state,
-          helperText: validationErrors?.state,
+          type: "number",
+          required: true,
+          error: !!validationErrors?.price,
+          helperText: validationErrors?.price,
+          onFocus: () =>
+            setValidationErrors({
+              ...validationErrors,
+              price: undefined,
+            }),
         },
       },
     ],
     [validationErrors]
   );
 
-  // Hooks for data operations...
-  const { mutateAsync: createUser } = useCreateUser();
-  const { data: fetchedUsers = [], isLoading: isLoadingUsers } = useGetUsers();
-  const { mutateAsync: updateUser } = useUpdateUser();
-  const { mutateAsync: deleteUser } = useDeleteUser();
-
-  const handleCreateUser = async ({ values, table }) => {
-    const newValidationErrors = validateUser(values);
-    if (Object.values(newValidationErrors).some((error) => error)) {
-      setValidationErrors(newValidationErrors);
-      return;
+  const handleCreateCourse = ({ values, table }) => {
+    const formData = new FormData();
+    for (const key in values) {
+      formData.append(key, values[key]);
     }
     setValidationErrors({});
-    await createUser(values);
+    createCourseMutation.mutate(formData);
     table.setCreatingRow(null);
   };
 
-  const handleSaveUser = async ({ values, table }) => {
-    const newValidationErrors = validateUser(values);
-    if (Object.values(newValidationErrors).some((error) => error)) {
-      setValidationErrors(newValidationErrors);
-      return;
+  const handleSaveCourse = ({ values, table }) => {
+    const formData = new FormData();
+    for (const key in values) {
+      formData.append(key, values[key]);
     }
     setValidationErrors({});
-    await updateUser(values);
+    updateCourseMutation.mutate(formData);
     table.setEditingRow(null);
   };
 
   const openDeleteConfirmModal = (row) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      deleteUser(row.original.id);
+    if (window.confirm("Are you sure you want to delete this course?")) {
+      deleteCourseMutation.mutate(row.original.id);
     }
   };
 
   const table = useMaterialReactTable({
     columns,
-    data: fetchedUsers,
+    data: fetchCourses,
     createDisplayMode: "row",
     editDisplayMode: "row",
     enableEditing: true,
     getRowId: (row) => row.id,
-    muiToolbarAlertBannerProps: isLoadingUsers
+    muiToolbarAlertBannerProps: isLoadingCourses
       ? {
           color: "error",
           children: "Error loading data",
@@ -132,9 +157,9 @@ export function CourseTable() {
       className: "min-h-[500px] rounded-lg shadow-lg overflow-hidden",
     },
     onCreatingRowCancel: () => setValidationErrors({}),
-    onCreatingRowSave: handleCreateUser,
+    onCreatingRowSave: handleCreateCourse,
     onEditingRowCancel: () => setValidationErrors({}),
-    onEditingRowSave: handleSaveUser,
+    onEditingRowSave: handleSaveCourse,
     renderRowActions: ({ row, table }) => (
       <Box className="flex space-x-2">
         <Tooltip title="Edit">
@@ -159,112 +184,10 @@ export function CourseTable() {
       </Button>
     ),
     state: {
-      isLoading: isLoadingUsers,
-      showAlertBanner: isLoadingUsers,
+      isLoading: isLoadingCourses,
+      showAlertBanner: isLoadingCourses,
     },
   });
 
   return <MaterialReactTable table={table} />;
-}
-function useCreateUser() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (user) => {
-      //send api update request here
-      await new Promise((resolve) => setTimeout(resolve, 1000)); //fake api call
-      return Promise.resolve();
-    },
-    //client side optimistic update
-    onMutate: (newUserInfo) => {
-      queryClient.setQueryData(["users"], (prevUsers) => [
-        ...prevUsers,
-        {
-          ...newUserInfo,
-          id: (Math.random() + 1).toString(36).substring(7),
-        },
-      ]);
-    },
-    // onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }), //refetch users after mutation, disabled for demo
-  });
-}
-
-//READ hook (get users from api)
-function useGetUsers() {
-  return useQuery({
-    queryKey: ["users"],
-    queryFn: async () => {
-      //send api request here
-      await new Promise((resolve) => setTimeout(resolve, 1000)); //fake api call
-      return Promise.resolve(fakeData);
-    },
-    refetchOnWindowFocus: false,
-  });
-}
-
-//UPDATE hook (put user in api)
-function useUpdateUser() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (user) => {
-      //send api update request here
-      await new Promise((resolve) => setTimeout(resolve, 1000)); //fake api call
-      return Promise.resolve();
-    },
-    //client side optimistic update
-    onMutate: (newUserInfo) => {
-      queryClient.setQueryData(["users"], (prevUsers) =>
-        prevUsers?.map((prevUser) =>
-          prevUser.id === newUserInfo.id ? newUserInfo : prevUser
-        )
-      );
-    },
-    // onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }), //refetch users after mutation, disabled for demo
-  });
-}
-
-//DELETE hook (delete user in api)
-function useDeleteUser() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (userId) => {
-      //send api update request here
-      await new Promise((resolve) => setTimeout(resolve, 1000)); //fake api call
-      return Promise.resolve();
-    },
-    //client side optimistic update
-    onMutate: (userId) => {
-      queryClient.setQueryData(["users"], (prevUsers) =>
-        prevUsers?.filter((user) => user.id !== userId)
-      );
-    },
-    // onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }), //refetch users after mutation, disabled for demo
-  });
-}
-
-const queryClient = new QueryClient();
-
-export const TableProvider = () => (
-  //Put this with your other react-query providers near root of your app
-  <QueryClientProvider client={queryClient}>
-    <CourseTable />
-  </QueryClientProvider>
-);
-
-const validateRequired = (value) => !!value.length;
-const validateEmail = (email) =>
-  !!email.length &&
-  email
-    .toLowerCase()
-    .match(
-      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-    );
-
-function validateUser(user) {
-  return {
-    firstName: !validateRequired(user.firstName)
-      ? "First Name is Required"
-      : "",
-    lastName: !validateRequired(user.lastName) ? "Last Name is Required" : "",
-    email: !validateEmail(user.email) ? "Incorrect Email Format" : "",
-  };
 }

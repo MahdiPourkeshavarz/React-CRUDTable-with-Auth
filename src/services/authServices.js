@@ -20,33 +20,36 @@ httpRequest.interceptors.request.use(
 );
 
 httpRequest.interceptors.response.use(
-  (config) => {
-    return config;
+  (response) => {
+    return response;
   },
-  (error) => {
-    const status = error.response.status;
+  async (error) => {
+    const status = error.response?.status;
     const originRequest = error.config;
     const refresh = localStorage.getItem("refreshToken");
 
     if (status === 401 && refresh) {
       return getRefreshToken(refresh)
         .then((res) => {
-          console.log(res);
-          localStorage.setItem("accessToken", res.data.access);
-          return httpRequest.request(originRequest);
+          localStorage.setItem("accessToken", res.access); // Adjusted to access property directly
+          originRequest.headers.Authorization = `Bearer ${res.access}`; // Update the original request
+          return httpRequest.request(originRequest); // Retry original request
         })
         .catch((error) => {
           return Promise.reject(error);
         });
     }
+    return Promise.reject(error); // Reject if not handled
   }
 );
 
-async function getRefreshToken() {
+async function getRefreshToken(refresh) {
   try {
-    const response = await httpRequest.get(API_URL.REFRESH_TOKEN_URL);
+    const response = await httpRequest.post(API_URL.REFRESH_TOKEN_URL, {
+      refresh: refresh, // Include the refresh token in the body
+    });
     return response.data;
   } catch (e) {
-    return e.message;
+    return Promise.reject(e); // Properly reject the error
   }
 }

@@ -1,9 +1,11 @@
-import { httpRequest } from "../../services/authServices";
-import { API_URL } from "../../constants";
+import { API_URL } from "../constants";
+import { httpRequest } from "./authServices";
 
 async function fetchCourses() {
-  const response = await httpRequest.get(API_URL.BASE_COURSE_URL);
-  return response.data;
+  const response = await httpRequest.get(`${API_URL.BASE_COURSE_URL}?limit=10`);
+  console.log(response.data.results);
+
+  return { data: response.data.results, total: response.data.count };
 }
 
 async function createCourse(course) {
@@ -29,7 +31,7 @@ async function deleteCourse(courseId) {
 async function updateCourse(course) {
   const response = await httpRequest.put(
     `${API_URL.BASE_COURSE_URL}${course.id}/`,
-    course
+    course.data
   );
   return response.data;
 }

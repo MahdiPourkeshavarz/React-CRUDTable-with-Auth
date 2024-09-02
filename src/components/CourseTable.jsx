@@ -34,6 +34,7 @@ export function CourseTable() {
     isLoading: isLoadingCourses,
     isError: isLoadingCoursesError,
     isFetching: isFetchingCourses,
+    refetch,
   } = useGetCourses();
 
   const createCourseMutation = useMutation({
@@ -44,14 +45,18 @@ export function CourseTable() {
         { ...newCourseInfo, id: crypto.randomUUID() },
       ]);
     },
+    onSuccess() {
+      refetch();
+    },
   });
 
   const deleteCourseMutation = useMutation({
     mutationFn: (courseId) => COURSE_SERVICE.deleteCourse(courseId),
     onSuccess: (courseId) => {
-      queryClient.invalidateQueries({
-        queryKey: ["courses"],
-      });
+      // queryClient.invalidateQueries({
+      //   queryKey: ["courses"],
+      // });
+      refetch();
     },
   });
 
@@ -63,6 +68,9 @@ export function CourseTable() {
           course.id === newCourseInfo.id ? newCourseInfo : course
         )
       );
+    },
+    onSuccess() {
+      refetch();
     },
   });
 

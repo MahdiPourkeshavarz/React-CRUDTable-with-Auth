@@ -28,6 +28,8 @@ export const convertToFormData = (courseData) => {
   formData.append("number_of_chapter", defaultValueCourse.number_of_chapter);
   formData.append("number_of_viewer", defaultValueCourse.number_of_viewer);
   formData.append("rating", defaultValueCourse.rating);
-  formData.append("upload_images", courseData.images[0]);
+  if (courseData?.upload_images?.length > 0) {
+    formData.append("upload_images", courseData.upload_images[0]);
+  }
   return formData;
 };
